@@ -91,17 +91,20 @@ def change_weights():  # все границы включительно
 def working():
     create_weights()
     init_weights()
-    print_weight()
+    # print_weight()
     init_I()
     I[1] = 1
     for i in range(layer_neurons[1]['start']):
         O[i] = I[i]
+
     for layer in range(1, len(layer_neurons)):
         for i in range(layer_neurons[layer]['start'], layer_neurons[layer]['end'] + 1):
             set_neuron_output_value(i, layer)
-    # for layer in range(1, len(layer_neurons)):
-    #     for i in range(layer_neurons[layer]['start'], layer_neurons[layer]['end']):
-    #         set_neuron_output_value_after_activation(i, layer)
+
+    for layer in range(1, len(layer_neurons)):
+        for i in range(layer_neurons[layer]['start'], layer_neurons[layer]['end'] + 1):
+            set_neuron_output_value_after_activation(i)
+    print(f"{I}\n{O}")
 
 
 if __name__ == '__main__':
