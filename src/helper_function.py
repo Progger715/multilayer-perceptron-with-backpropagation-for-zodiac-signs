@@ -2,18 +2,18 @@ import random
 import numpy as np
 
 weights = []
-I = []
-delta = []
-O = []
+I = []  # выходное значение нейронов до функции активации
+delta = []  # считается при обратном проходе, пока хз
+O = []  # выходное значение нейронов после функции активации
 layer_neurons = {
     0: {'start': 0, 'end': 1},
     1: {'start': 2, 'end': 4},
     2: {'start': 5, 'end': 6},
     3: {'start': 7, 'end': 7},
 }
-alpha = 0.1
+alpha = 0.1  # скорость обучения
 gamma = 0.1
-size = 8
+size = 8  # количество нейронов
 
 
 def init_I():
@@ -47,7 +47,7 @@ def print_weight():
 def set_neuron_output_value(neuron_index, layer_index):  # подсчет I, не подается входной слой
     start = layer_neurons[layer_index - 1]['start']
     end = layer_neurons[layer_index - 1]['end']
-    for i in range(start, end, 1):
+    for i in range(start, end + 1, 1):
         I[neuron_index] += I[i] * weights[i][neuron_index]
 
 
@@ -91,16 +91,17 @@ def change_weights():  # все границы включительно
 def working():
     create_weights()
     init_weights()
+    print_weight()
     init_I()
     I[1] = 1
     for i in range(layer_neurons[1]['start']):
         O[i] = I[i]
     for layer in range(1, len(layer_neurons)):
-        for i in range(layer_neurons[layer]['start'], layer_neurons[layer]['end']):
+        for i in range(layer_neurons[layer]['start'], layer_neurons[layer]['end'] + 1):
             set_neuron_output_value(i, layer)
-    for layer in range(1, len(layer_neurons)):
-        for i in range(layer_neurons[layer]['start'], layer_neurons[layer]['end']):
-            set_neuron_output_value_after_activation(i, layer)
+    # for layer in range(1, len(layer_neurons)):
+    #     for i in range(layer_neurons[layer]['start'], layer_neurons[layer]['end']):
+    #         set_neuron_output_value_after_activation(i, layer)
 
 
 if __name__ == '__main__':
