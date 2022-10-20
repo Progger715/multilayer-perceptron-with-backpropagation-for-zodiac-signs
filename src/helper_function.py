@@ -1,7 +1,9 @@
+import math
 import random
 import numpy as np
 from pathlib import Path
 import time
+from alive_progress import alive_bar
 import reader_image
 
 weights = []  # веса связей между нейронами
@@ -84,7 +86,7 @@ def set_neuron_output_value(neuron_index, layer_index):  # подсчет I, н�
     end = layer_neurons[layer_index - 1]['end']
     for i in range(start, end + 1, 1):
         I[neuron_index] += O[i] * weights[i][neuron_index]
-        set_neuron_output_value_after_activation(neuron_index)
+    set_neuron_output_value_after_activation(neuron_index)
 
 
 def set_neuron_output_value_after_activation(neuron_index):
@@ -164,8 +166,24 @@ def identify_image(file_name, true_index_value):  # одна тренировк�
     change_weights()
 
 
+def softmax(x):
+    sum = 0
+    for i in range(12):
+        sum += np.exp(x)
+    return np.exp(x) / sum
+
+
+def get_loss_value(loss, true_value_index):
+    for i in range(0, 12, 1):
+        if i == true_value_index:
+            loss += math.sqrt(math.pow(1 - softmax(O[i + 1792]), 2))
+        else:
+            loss += math.sqrt(math.pow(0 - softmax(O[i + 1792]), 2))
+    return loss
+
+
 def train():
-    count_eras = 5
+    count_eras = 3
     zodiac_signs = ["Aries", "Taurus", "Gemini",
                     "Cancer", "Leo", "Virgo",
                     "Libra", "Scorpio", "Sagittarius",
@@ -173,25 +191,55 @@ def train():
     create_weights()
     init_weights()
     create_empty_I_delta_O()
+    loss = 0
+    path_loss = Path(Path.cwd().parent, "output data", "value_loss_function.txt")
+    path_accuracy = Path(Path.cwd().parent, "output data", "value_accuracy.txt")
+    file_loss = open(path_loss, 'w')
+    file_accuracy = open(path_accuracy, "w")
+    count_true_answers = 0
     # true_sign_zodiac = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    for number_era in range(count_eras):  # era
-        print("era = ", number_era)
-        for number_var in range(1, 17):
-            for number_sign in range(12):
-                # true_sign_zodiac[number_sign] = 1
-                file_name = f"{zodiac_signs[number_sign]}{number_var}.png"
-                print(file_name)
-                identify_image(file_name, number_sign)
-                print(zodiac_signs[choose_name_image()], "\n")
-                clean_weights_delta_and_delta()
-                # true_sign_zodiac[number_sign] = 0
+    with alive_bar(count_eras*12*16, dual_line=True) as bar:
+        bar.text = f'\t-> The system is trained on {count_eras} eras , please wait...'
+        for number_era in range(count_eras):  # era
+            # print("era = ", number_era)
+            for number_var in range(1, 17):
+                for number_sign in range(12):
+                    # true_sign_zodiac[number_sign] = 1
+                    file_name = f"{zodiac_signs[number_sign]}{number_var}.png"
+                    # print(file_name)
+                    identify_image(file_name, number_sign)
+                    # print(zodiac_signs[choose_name_image()], "\n")
+                    if choose_name_image() == number_var:
+                        count_true_answers += 1
+                    clean_weights_delta_and_delta()
+                    # true_sign_zodiac[number_sign] = 0
+                    bar()
+            loss = get_loss_value(loss, number_sign)
+            file_loss.write(f"{number_era} {loss}\n")
+            file_accuracy.write(f"{number_era} {count_true_answers / (16 * 12)}\n")  # 16 images and 12 signs
+    file_loss.close()
+    file_accuracy.close()
+
+
+def detect_images():
+    zodiac_signs = ["Aries", "Taurus", "Gemini",
+                    "Cancer", "Leo", "Virgo",
+                    "Libra", "Scorpio", "Sagittarius",
+                    "Capricorn", "Aquarius", "Pisces"]
+    for number_var in range(17, 21):
+        for number_sign in range(12):
+            file_name = f"{zodiac_signs[number_sign]}{number_var}.png"
+            print(file_name)
+            identify_image(file_name, number_sign)
+            print(zodiac_signs[choose_name_image()], "\n")
+            clean_weights_delta_and_delta()
 
 
 def choose_name_image():
     max = -1
     index_true_value = 0
     for i in range(0, 12, 1):
-        print(f"{i} = {O[i + 1792]}")
+        # print(f"{i} = {O[i + 1792]}")
         if O[i + 1792] > max:
             max = O[i + 1792]
             index_true_value = i
