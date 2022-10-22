@@ -3,7 +3,8 @@ from PIL import Image, EpsImagePlugin
 from tkinter.ttk import Combobox
 from tkinter import scrolledtext
 from pathlib import Path
-import perceptron
+# import perceptron
+import helper_function
 
 canvas_width = 128
 canvas_height = 128
@@ -49,8 +50,9 @@ def save():
 def get_result():
     save()
     image_for_identy = Path(Path.cwd().parent, "picture reads", "Image.png")
-    answer = perceptron.identify_image(image_for_identy)
-    answer += f" - {zodiac_signs_rus[answer]}"
+    # answer = perceptron.identify_image(image_for_identy)
+    index_answer = helper_function.identify_image(image_for_identy)
+    answer = f" - {zodiac_signs_rus[index_answer]}"
     result.delete(1.0, END)
     result.insert(INSERT, answer)
 
@@ -75,9 +77,11 @@ def select():
         save()
         # training
         image_for_identy = Path(Path.cwd().parent, "picture reads", "Image.png")
-        perceptron.init_weights()
+        # perceptron.init_weights()
 
-        answer = perceptron.train_with_teacher(index, image_for_identy)
+        # answer = perceptron.train_with_teacher(index, image_for_identy)
+        helper_function.identify_image_for_train(image_for_identy, index)
+        answer = helper_function.choose_name_image()
         answer += f" - {zodiac_signs_rus[answer]}"
         message = f"Сеть прошла тренировку.\nНа картинке: {selected_sign}\nСеть обнаружила: {answer}"
         result.delete(1.0, END)
@@ -118,6 +122,7 @@ def create_window():
 
 if __name__ == "__main__":
     create_window()
-    perceptron.start_perceptron()
+    helper_function.train()
+    # perceptron.start_perceptron()
     # perceptron.print_all_weights()
     root.mainloop()

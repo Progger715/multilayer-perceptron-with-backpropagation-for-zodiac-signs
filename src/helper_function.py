@@ -18,7 +18,7 @@ layer_neurons = {
     3: {'start': 1792, 'end': 1803},
 }
 alpha = 0.1  # скорость обучения
-gamma = 0.1
+gamma = 0.9
 size = 1804  # 1024+512+256+12 количество нейронов
 
 
@@ -82,6 +82,7 @@ def print_O():
 
 
 def set_neuron_output_value(neuron_index, layer_index):  # подсчет I, не подается входной слой
+    I[neuron_index] = 0
     start = layer_neurons[layer_index - 1]['start']
     end = layer_neurons[layer_index - 1]['end']
     for i in range(start, end + 1, 1):
@@ -103,7 +104,9 @@ def get_derivative(x):
 
 
 def set_output_reverse_trip(neuron_index, true_value):
-    delta[neuron_index] = (true_value - O[neuron_index]) * get_derivative(I[neuron_index])
+    loss = 0
+    #delta[neuron_index] = (true_value - O[neuron_index]) * get_derivative(I[neuron_index])
+    delta[neuron_index] = ((O[neuron_index] - true_value) / (math.fabs(O[neuron_index] - true_value))) * get_derivative(I[neuron_index])
 
 
 def set_hidden_reverse_trip(neuron_index, layer_index):
@@ -122,20 +125,17 @@ def change_weights():  # все границы включительно
             start_j = layer_neurons[a - 1]['start']
             end_j = layer_neurons[a - 1]['end']
             for i in range(end_j, start_j - 1, -1):  # перебор по нейронам на предыдущем слое
-                delta_w = alpha * delta[j] * O[i] + gamma * weights_delta[i][j]
+                delta_w = (1 - gamma) * alpha * delta[j] * O[i] + gamma * weights_delta[i][j]
                 weights_delta[i][j] = delta_w
                 weights[i][j] += delta_w
 
 
-def identify_image(file_name, true_index_value):  # одна тренировка для одной картинки
-    path = Path(Path.cwd().parent, "pictures for learning", file_name)
+def identify_image_for_train(path_file_image, true_index_value):  # одна тренировка для одной картинки
     global I
-    I = reader_image.read_values_image(I, path)
-    # print_I()
+    I = reader_image.read_values_image(I, path_file_image)
 
     for i in range(layer_neurons[1]['start']):
         O[i] = I[i]
-    # print_O()
     # установим все значения нейронов до функции активации
     for layer in range(1, len(layer_neurons)):
         for i in range(layer_neurons[layer]['start'], layer_neurons[layer]['end'] + 1):
@@ -149,12 +149,13 @@ def identify_image(file_name, true_index_value):  # одна тренировк�
 
     # считаем дельту для выходного слоя
     for output_neuron in range(layer_neurons[3]["start"], layer_neurons[3]["end"] + 1):
+        set_output_reverse_trip(output_neuron, true_index_value)
         index = output_neuron - 1792
         if index == true_index_value:
             set_output_reverse_trip(output_neuron, 1)
         elif index != true_index_value:
             set_output_reverse_trip(output_neuron, 0)
-            # тру вэлью будет массивом, где 1 бдует верный нейрон, а остальные нули
+        # тру вэлью будет массивом, где 1 бдует верный нейрон, а остальные нули
         # добавить массив тру вальью, когда известна картинка
 
     # считаем дельту для скрытых слоев
@@ -164,6 +165,20 @@ def identify_image(file_name, true_index_value):  # одна тренировк�
 
     # меняем веса
     change_weights()
+
+
+def identify_image(path_file_image):  # одна тренировка для одной картинки
+    global I
+    I = reader_image.read_values_image(I, path_file_image)
+
+    for i in range(layer_neurons[1]['start']):
+        O[i] = I[i]
+    # установим все значения нейронов до функции активации
+    for layer in range(1, len(layer_neurons)):
+        for i in range(layer_neurons[layer]['start'], layer_neurons[layer]['end'] + 1):
+            # print(f"i = {i}, layer = {layer}")
+            set_neuron_output_value(i, layer)
+    return choose_name_image()
 
 
 def softmax(x):
@@ -183,7 +198,7 @@ def get_loss_value(loss, true_value_index):
 
 
 def train():
-    count_eras = 3
+    count_eras = 15
     zodiac_signs = ["Aries", "Taurus", "Gemini",
                     "Cancer", "Leo", "Virgo",
                     "Libra", "Scorpio", "Sagittarius",
@@ -198,7 +213,7 @@ def train():
     file_accuracy = open(path_accuracy, "w")
     count_true_answers = 0
     # true_sign_zodiac = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    with alive_bar(count_eras*12*16, dual_line=True) as bar:
+    with alive_bar(count_eras * 12 * 16, dual_line=True) as bar:
         bar.text = f'\t-> The system is trained on {count_eras} eras , please wait...'
         for number_era in range(count_eras):  # era
             # print("era = ", number_era)
@@ -206,9 +221,10 @@ def train():
                 for number_sign in range(12):
                     # true_sign_zodiac[number_sign] = 1
                     file_name = f"{zodiac_signs[number_sign]}{number_var}.png"
-                    # print(file_name)
-                    identify_image(file_name, number_sign)
-                    # print(zodiac_signs[choose_name_image()], "\n")
+                    print(file_name)
+                    # path = Path(Path.cwd().parent, "pictures for learning", file_name)
+                    identify_image_for_train(Path(Path.cwd().parent, "pictures for learning", file_name), number_sign)
+                    print(zodiac_signs[choose_name_image()], "\n")
                     if choose_name_image() == number_var:
                         count_true_answers += 1
                     clean_weights_delta_and_delta()
@@ -216,7 +232,8 @@ def train():
                     bar()
             loss = get_loss_value(loss, number_sign)
             file_loss.write(f"{number_era} {loss}\n")
-            file_accuracy.write(f"{number_era} {count_true_answers / (16 * 12)}\n")  # 16 images and 12 signs
+            file_accuracy.write(
+                f"{number_era} {count_true_answers / (16 * 12 * (count_eras + 1))}\n")  # 16 images and 12 signs
     file_loss.close()
     file_accuracy.close()
 
@@ -230,7 +247,8 @@ def detect_images():
         for number_sign in range(12):
             file_name = f"{zodiac_signs[number_sign]}{number_var}.png"
             print(file_name)
-            identify_image(file_name, number_sign)
+            # Path(Path.cwd().parent, "pictures for learning", file_name)
+            identify_image_for_train(Path(Path.cwd().parent, "pictures for learning", file_name), number_sign)
             print(zodiac_signs[choose_name_image()], "\n")
             clean_weights_delta_and_delta()
 
