@@ -17,7 +17,7 @@ layer_neurons = {
     2: {'start': 1536, 'end': 1791},
     3: {'start': 1792, 'end': 1803},
 }
-alpha = 0.1  # скорость обучения
+alpha = 0.7  # скорость обучения
 gamma = 0.1
 size = 1804  # 1024+512+256+12 количество нейронов
 
@@ -55,8 +55,10 @@ def init_weights():
 
 
 def print_weight():
-    for i in range(size):
-        print(weights[i])
+    print("Weight:")
+    for i in range(2):
+        for j in range(3):
+            print(weights[i][j])
 
 
 def print_I():
@@ -72,24 +74,21 @@ def print_I():
 
 def print_O():
     print("O")
-    z = 0
-    for i in range(32):
-        for j in range(32):
-            print(O[z], end=' ')
-            z += 1
-        print()
-    print()
+    for i in range(0, 12, 1):
+        print(f"{i} = {O[i + 1792]}")
 
 
 def set_neuron_output_value(neuron_index, layer_index):  # подсчет I, не подается входной слой
+    I[neuron_index] = 0 # надо ли?
     start = layer_neurons[layer_index - 1]['start']
     end = layer_neurons[layer_index - 1]['end']
     for i in range(start, end + 1, 1):
-        I[neuron_index] += O[i] * weights[i][neuron_index]
+        I[neuron_index] += (O[i] * weights[i][neuron_index])
     set_neuron_output_value_after_activation(neuron_index)
 
 
 def set_neuron_output_value_after_activation(neuron_index):
+    O[neuron_index] = 0
     O[neuron_index] = activation_function(I[neuron_index])
 
 
@@ -103,10 +102,12 @@ def get_derivative(x):
 
 
 def set_output_reverse_trip(neuron_index, true_value):
+    delta[neuron_index] = 0
     delta[neuron_index] = (true_value - O[neuron_index]) * get_derivative(I[neuron_index])
 
 
 def set_hidden_reverse_trip(neuron_index, layer_index):
+    delta[neuron_index] = 0 # надо ли?
     start = layer_neurons[layer_index + 1]['start']
     end = layer_neurons[layer_index + 1]['end']
     for i in range(start, end + 1, 1):
@@ -123,6 +124,7 @@ def change_weights():  # все границы включительно
             end_j = layer_neurons[a - 1]['end']
             for i in range(end_j, start_j - 1, -1):  # перебор по нейронам на предыдущем слое
                 delta_w = alpha * delta[j] * O[i] + gamma * weights_delta[i][j]
+                #delta_w = alpha * delta[j] * O[i]
                 weights_delta[i][j] = delta_w
                 weights[i][j] += delta_w
 
@@ -198,25 +200,30 @@ def train():
     file_accuracy = open(path_accuracy, "w")
     count_true_answers = 0
     # true_sign_zodiac = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    with alive_bar(count_eras*12*16, dual_line=True) as bar:
-        bar.text = f'\t-> The system is trained on {count_eras} eras , please wait...'
-        for number_era in range(count_eras):  # era
-            # print("era = ", number_era)
-            for number_var in range(1, 17):
-                for number_sign in range(12):
-                    # true_sign_zodiac[number_sign] = 1
-                    file_name = f"{zodiac_signs[number_sign]}{number_var}.png"
-                    # print(file_name)
-                    identify_image(file_name, number_sign)
-                    # print(zodiac_signs[choose_name_image()], "\n")
-                    if choose_name_image() == number_var:
-                        count_true_answers += 1
-                    clean_weights_delta_and_delta()
-                    # true_sign_zodiac[number_sign] = 0
-                    bar()
-            loss = get_loss_value(loss, number_sign)
-            file_loss.write(f"{number_era} {loss}\n")
-            file_accuracy.write(f"{number_era} {count_true_answers / (16 * 12)}\n")  # 16 images and 12 signs
+    # with alive_bar(count_eras*12*16, dual_line=True) as bar:
+    #     bar.text = f'\t-> The system is trained on {count_eras} eras , please wait...'
+    print_O()
+    for number_era in range(count_eras):  # era
+        print("era = ", number_era)
+        for number_var in range(1, 17):
+            for number_sign in range(12):
+                # true_sign_zodiac[number_sign] = 1
+                file_name = f"{zodiac_signs[number_sign]}{number_var}.png"
+                print(file_name)
+                identify_image(file_name, number_sign)
+                print(zodiac_signs[choose_name_image()], "\n")
+                if choose_name_image() == number_var:
+                    count_true_answers += 1
+                clean_weights_delta_and_delta()
+                # true_sign_zodiac[number_sign] = 0
+                # bar()
+        # print_weight()
+        # print_O()
+        loss = get_loss_value(loss, number_sign)
+        file_loss.write(f"{number_era} {loss}\n")
+        file_accuracy.write(f"{number_era} {count_true_answers / (16 * 12 * (count_eras +1 ))}\n")  # 16 images and 12 signs
+    print_weight()
+    print_O()
     file_loss.close()
     file_accuracy.close()
 
